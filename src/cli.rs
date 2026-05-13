@@ -47,6 +47,10 @@ pub struct Cli {
     /// Allow file uploads
     #[arg(long)]
     pub upload: bool,
+
+    /// Max upload size in MB (default: 2048 = 2GB)
+    #[arg(long, default_value_t = 2048)]
+    pub max_upload_size: usize,
 }
 
 impl Cli {
@@ -88,6 +92,7 @@ mod tests {
             pass: None,
             cors: false,
             upload: false,
+            max_upload_size: 2048,
         }
     }
 

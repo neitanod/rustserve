@@ -22,6 +22,7 @@ pub fn build_router(state: Arc<AppState>) -> Router {
     let mut router = Router::new()
         .route("/", get(handle_request).post(handle_upload))
         .route("/{*path}", get(handle_request).post(handle_upload))
+        .layer(upload::upload_body_limit(state.max_upload_bytes))
         .with_state(state.clone());
 
     if let Some((ref user, ref pass)) = state.auth {

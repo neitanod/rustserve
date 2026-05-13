@@ -75,6 +75,7 @@ async fn main() {
         auth,
         cli.cors,
         cli.upload,
+        cli.max_upload_size * 1024 * 1024,
     );
 
     let router = server::build_router(state.clone());

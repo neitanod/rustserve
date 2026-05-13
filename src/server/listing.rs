@@ -43,6 +43,9 @@ pub fn scan_directory(path: &Path) -> std::io::Result<Vec<FileEntry>> {
 
 pub fn render_listing(request_path: &str, entries: &[FileEntry], upload_enabled: bool) -> String {
     let breadcrumbs = build_breadcrumbs(request_path);
+    let display_path = percent_encoding::percent_decode_str(request_path)
+        .decode_utf8()
+        .unwrap_or(std::borrow::Cow::Borrowed(request_path));
     let rows: String = entries
         .iter()
         .map(|e| {
@@ -234,7 +237,7 @@ tr:hover {{ background: #161b22; cursor: pointer; }}
 </div>
 </body>
 </html>"##,
-        path = request_path,
+        path = display_path,
     )
 }
 
@@ -245,8 +248,11 @@ fn build_breadcrumbs(path: &str) -> String {
     for part in &parts {
         accumulated.push('/');
         accumulated.push_str(part);
+        let display = percent_encoding::percent_decode_str(part)
+            .decode_utf8()
+            .unwrap_or(std::borrow::Cow::Borrowed(part));
         crumbs.push(format!(
-            r#"<span class="sep">/</span><a href="{accumulated}">{part}</a>"#
+            r#"<span class="sep">/</span><a href="{accumulated}">{display}</a>"#
         ));
     }
     crumbs.join("")

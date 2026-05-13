@@ -32,7 +32,13 @@ h2::before { content: "## "; color: #6e7681; }
     border-radius: 6px;
     padding: 0.8rem 1rem;
     margin: 0.5rem 0;
+    overflow-x: auto;
 }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #484f58; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #6e7681; }
+* { scrollbar-width: thin; scrollbar-color: #484f58 transparent; }
 .panel .empty { color: #6e7681; font-size: 0.8rem; }
 table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
 th {

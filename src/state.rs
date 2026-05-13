@@ -34,6 +34,7 @@ pub struct AppState {
     pub auth: Option<(String, String)>,
     pub cors: bool,
     pub upload: bool,
+    pub max_upload_bytes: usize,
     pub clients: RwLock<HashMap<String, ClientInfo>>,
     pub downloads: RwLock<HashMap<String, DownloadInfo>>,
     pub shutdown: broadcast::Sender<()>,
@@ -49,6 +50,7 @@ impl AppState {
         auth: Option<(String, String)>,
         cors: bool,
         upload: bool,
+        max_upload_bytes: usize,
     ) -> Arc<Self> {
         let (shutdown, _) = broadcast::channel(1);
         Arc::new(Self {
@@ -61,6 +63,7 @@ impl AppState {
             auth,
             cors,
             upload,
+            max_upload_bytes,
             clients: RwLock::new(HashMap::new()),
             downloads: RwLock::new(HashMap::new()),
             shutdown,

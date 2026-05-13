@@ -1,10 +1,15 @@
-use axum::extract::{Multipart, State};
+use axum::extract::{DefaultBodyLimit, Multipart, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Redirect, Response};
+use futures::TryStreamExt;
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 
 use crate::state::AppState;
+
+pub fn upload_body_limit(max_bytes: usize) -> DefaultBodyLimit {
+    DefaultBodyLimit::max(max_bytes)
+}
 
 pub async fn handle_upload(
     State(state): State<Arc<AppState>>,
@@ -24,7 +29,7 @@ pub async fn handle_upload(
         .map(|u| u.path().to_string())
         .unwrap_or_else(|_| "/".to_string());
 
-    while let Ok(Some(field)) = multipart.next_field().await {
+    while let Ok(Some(mut field)) = multipart.next_field().await {
         let file_name = match field.file_name() {
             Some(name) => sanitize_filename(name),
             None => continue,
@@ -50,11 +55,6 @@ pub async fn handle_upload(
             return (StatusCode::FORBIDDEN, "Invalid filename").into_response();
         }
 
-        let data = match field.bytes().await {
-            Ok(d) => d,
-            Err(_) => return (StatusCode::BAD_REQUEST, "Read error").into_response(),
-        };
-
         let mut file = match tokio::fs::File::create(&dest).await {
             Ok(f) => f,
             Err(e) => {
@@ -66,8 +66,10 @@ pub async fn handle_upload(
             }
         };
 
-        if file.write_all(&data).await.is_err() {
-            return (StatusCode::INTERNAL_SERVER_ERROR, "Write error").into_response();
+        while let Ok(Some(chunk)) = field.try_next().await {
+            if file.write_all(&chunk).await.is_err() {
+                return (StatusCode::INTERNAL_SERVER_ERROR, "Write error").into_response();
+            }
         }
     }
 
