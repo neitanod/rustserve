@@ -104,9 +104,58 @@ pub fn render_listing(request_path: &str, entries: &[FileEntry], upload_enabled:
         r#"<div class="upload-area" id="upload-area">
 <form method="POST" enctype="multipart/form-data" id="upload-form">
 <input type="file" name="file" id="file-input" multiple>
-<button type="submit">Upload</button>
+<button type="submit" id="upload-btn">Upload</button>
 </form>
-</div>"#
+<div class="progress-wrap" id="progress-wrap">
+<div class="progress-bar" id="progress-bar"></div>
+<span class="progress-text" id="progress-text">0%</span>
+</div>
+</div>
+<script>
+(function(){
+  var form=document.getElementById('upload-form'),
+      wrap=document.getElementById('progress-wrap'),
+      bar=document.getElementById('progress-bar'),
+      txt=document.getElementById('progress-text'),
+      btn=document.getElementById('upload-btn');
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var fd=new FormData(form);
+    var xhr=new XMLHttpRequest();
+    wrap.style.display='flex';
+    btn.disabled=true;
+    btn.textContent='Uploading...';
+    xhr.upload.addEventListener('progress',function(ev){
+      if(ev.lengthComputable){
+        var pct=Math.round(ev.loaded/ev.total*100);
+        bar.style.width=pct+'%';
+        txt.textContent=pct+'% ('+fmt(ev.loaded)+' / '+fmt(ev.total)+')';
+      }
+    });
+    xhr.addEventListener('load',function(){
+      bar.style.width='100%';
+      txt.textContent='Done!';
+      btn.textContent='Upload';
+      btn.disabled=false;
+      setTimeout(function(){location.reload();},600);
+    });
+    xhr.addEventListener('error',function(){
+      txt.textContent='Upload failed';
+      bar.style.background='#da3633';
+      btn.textContent='Upload';
+      btn.disabled=false;
+    });
+    xhr.open('POST',location.pathname);
+    xhr.send(fd);
+  });
+  function fmt(b){
+    if(b<1024)return b+'B';
+    if(b<1048576)return(b/1024).toFixed(1)+'KB';
+    if(b<1073741824)return(b/1048576).toFixed(1)+'MB';
+    return(b/1073741824).toFixed(2)+'GB';
+  }
+})();
+</script>"#
     } else {
         ""
     };
@@ -203,6 +252,37 @@ tr:hover {{ background: #161b22; cursor: pointer; }}
 }}
 .upload-area button:hover {{ background: #2ea043; }}
 .upload-area input[type=file] {{ color: #c9d1d9; }}
+.upload-area button:disabled {{ opacity: 0.6; cursor: default; }}
+.progress-wrap {{
+    display: none;
+    align-items: center;
+    margin-top: 0.8rem;
+    gap: 0.8rem;
+    height: 1.4rem;
+}}
+.progress-bar {{
+    flex: 1;
+    height: 100%;
+    background: #238636;
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.2s;
+}}
+.progress-wrap {{
+    background: #21262d;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}}
+.progress-text {{
+    position: absolute;
+    right: 0.5rem;
+    top: 0;
+    line-height: 1.4rem;
+    font-size: 0.75rem;
+    color: #c9d1d9;
+    white-space: nowrap;
+}}
 .footer {{
     margin-top: 2rem;
     padding-top: 0.8rem;

@@ -5,6 +5,8 @@ pub mod security;
 pub mod tls;
 pub mod tracking;
 pub mod upload;
+pub mod webdav;
+pub mod webdav_xml;
 
 use axum::middleware as mw;
 use axum::routing::get;

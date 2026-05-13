@@ -56,6 +56,16 @@ async fn main() {
         None
     };
 
+    let webdav = cli.webdav || cli.webdav_rw;
+    let dav_port = if webdav {
+        Some(find_port(5001, cli.port_dav).unwrap_or_else(|e| {
+            eprintln!("Error: {e}");
+            std::process::exit(1);
+        }))
+    } else {
+        None
+    };
+
     let interfaces = local_interfaces();
 
     let auth = match (cli.user, cli.pass) {
@@ -76,6 +86,8 @@ async fn main() {
         cli.cors,
         cli.upload,
         cli.max_upload_size * 1024 * 1024,
+        dav_port,
+        cli.webdav_rw,
     );
 
     let router = server::build_router(state.clone());
@@ -90,6 +102,11 @@ async fn main() {
                 eprintln!("HTTPS error: {e}");
             }
         });
+    }
+
+    if let Some(dp) = dav_port {
+        let dav_router = server::webdav::build_webdav_router(state.clone());
+        tokio::spawn(server::webdav::run_webdav(dav_router, dp));
     }
 
     if let Some(gui_port) = webui_port {

@@ -51,6 +51,18 @@ pub struct Cli {
     /// Max upload size in MB (default: 2048 = 2GB)
     #[arg(long, default_value_t = 2048)]
     pub max_upload_size: usize,
+
+    /// Enable WebDAV server (read-only)
+    #[arg(long)]
+    pub webdav: bool,
+
+    /// Enable write operations on WebDAV (implies --webdav)
+    #[arg(long)]
+    pub webdav_rw: bool,
+
+    /// WebDAV port (default: auto-find from 5001)
+    #[arg(long)]
+    pub port_dav: Option<u16>,
 }
 
 impl Cli {
@@ -93,6 +105,9 @@ mod tests {
             cors: false,
             upload: false,
             max_upload_size: 2048,
+            webdav: false,
+            webdav_rw: false,
+            port_dav: None,
         }
     }
 

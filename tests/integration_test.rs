@@ -7,6 +7,44 @@ use serve::network::NetIface;
 use serve::server;
 use serve::state::AppState;
 
+async fn start_dav_server(dir: &std::path::Path, rw: bool) -> (u16, Arc<AppState>) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    let interfaces = vec![NetIface {
+        name: "lo".into(),
+        ip: std::net::IpAddr::from([127, 0, 0, 1]),
+    }];
+
+    let state = AppState::new(
+        dir.canonicalize().unwrap(),
+        0,
+        None,
+        None,
+        interfaces,
+        None,
+        false,
+        false,
+        2048 * 1024 * 1024,
+        Some(port),
+        rw,
+    );
+
+    let router = serve::server::webdav::build_webdav_router(state.clone());
+
+    tokio::spawn(async move {
+        axum::serve(
+            listener,
+            router.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .await
+        .unwrap();
+    });
+
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    (port, state)
+}
+
 async fn start_test_server(dir: &std::path::Path, upload: bool) -> (u16, Arc<AppState>) {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
@@ -26,6 +64,8 @@ async fn start_test_server(dir: &std::path::Path, upload: bool) -> (u16, Arc<App
         false,
         upload,
         2048 * 1024 * 1024,
+        None,
+        false,
     );
 
     let router = server::build_router(state.clone());
@@ -62,6 +102,8 @@ async fn start_auth_server(dir: &std::path::Path, user: &str, pass: &str) -> u16
         false,
         false,
         2048 * 1024 * 1024,
+        None,
+        false,
     );
 
     let router = server::build_router(state);
@@ -404,4 +446,234 @@ async fn test_subdir_listing() {
         "subdir listing should contain nested.txt"
     );
     assert!(body.contains(".."), "subdir listing should have parent link");
+}
+
+#[tokio::test]
+async fn test_webdav_options() {
+    let dir = setup_test_dir();
+    let (port, _state) = start_dav_server(dir.path(), false).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .request(reqwest::Method::OPTIONS, format!("http://127.0.0.1:{port}/"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    assert_eq!(resp.headers().get("dav").unwrap().to_str().unwrap(), "1,2");
+    assert!(resp
+        .headers()
+        .get("allow")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .contains("PROPFIND"));
+}
+
+#[tokio::test]
+async fn test_webdav_propfind_root() {
+    let dir = setup_test_dir();
+    let (port, _state) = start_dav_server(dir.path(), false).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .request(
+            reqwest::Method::from_bytes(b"PROPFIND").unwrap(),
+            format!("http://127.0.0.1:{port}/"),
+        )
+        .header("Depth", "1")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 207);
+
+    let body = resp.text().await.unwrap();
+    assert!(body.contains("<D:multistatus"), "should be XML multistatus");
+    assert!(body.contains("hello.txt"), "should list hello.txt");
+    assert!(body.contains("subdir"), "should list subdir");
+    assert!(body.contains("<D:collection/>"), "subdir should be collection");
+}
+
+#[tokio::test]
+async fn test_webdav_propfind_depth0() {
+    let dir = setup_test_dir();
+    let (port, _state) = start_dav_server(dir.path(), false).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .request(
+            reqwest::Method::from_bytes(b"PROPFIND").unwrap(),
+            format!("http://127.0.0.1:{port}/"),
+        )
+        .header("Depth", "0")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 207);
+
+    let body = resp.text().await.unwrap();
+    assert!(body.contains("<D:collection/>"), "root should be collection");
+    assert!(!body.contains("hello.txt"), "depth 0 should not list children");
+}
+
+#[tokio::test]
+async fn test_webdav_get_file() {
+    let dir = setup_test_dir();
+    let (port, _state) = start_dav_server(dir.path(), false).await;
+
+    let resp = reqwest::get(format!("http://127.0.0.1:{port}/hello.txt"))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    assert_eq!(resp.text().await.unwrap(), "hello world\n");
+}
+
+#[tokio::test]
+async fn test_webdav_put_readonly() {
+    let dir = setup_test_dir();
+    let (port, _state) = start_dav_server(dir.path(), false).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .put(format!("http://127.0.0.1:{port}/newfile.txt"))
+        .body("new content")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 403);
+}
+
+#[tokio::test]
+async fn test_webdav_put_readwrite() {
+    let dir = setup_test_dir();
+    let (port, _state) = start_dav_server(dir.path(), true).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .put(format!("http://127.0.0.1:{port}/newfile.txt"))
+        .body("new content")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 201);
+
+    let content = std::fs::read_to_string(dir.path().join("newfile.txt")).unwrap();
+    assert_eq!(content, "new content");
+}
+
+#[tokio::test]
+async fn test_webdav_delete() {
+    let dir = setup_test_dir();
+    let (port, _state) = start_dav_server(dir.path(), true).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .delete(format!("http://127.0.0.1:{port}/hello.txt"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 204);
+    assert!(!dir.path().join("hello.txt").exists());
+}
+
+#[tokio::test]
+async fn test_webdav_mkcol() {
+    let dir = setup_test_dir();
+    let (port, _state) = start_dav_server(dir.path(), true).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .request(
+            reqwest::Method::from_bytes(b"MKCOL").unwrap(),
+            format!("http://127.0.0.1:{port}/newdir"),
+        )
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 201);
+    assert!(dir.path().join("newdir").is_dir());
+}
+
+#[tokio::test]
+async fn test_webdav_lock() {
+    let dir = setup_test_dir();
+    let (port, _state) = start_dav_server(dir.path(), false).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .request(
+            reqwest::Method::from_bytes(b"LOCK").unwrap(),
+            format!("http://127.0.0.1:{port}/hello.txt"),
+        )
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    assert!(resp.headers().contains_key("lock-token"));
+
+    let body = resp.text().await.unwrap();
+    assert!(body.contains("urn:uuid:"));
+}
+
+#[tokio::test]
+async fn test_webdav_unlock() {
+    let dir = setup_test_dir();
+    let (port, _state) = start_dav_server(dir.path(), false).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .request(
+            reqwest::Method::from_bytes(b"UNLOCK").unwrap(),
+            format!("http://127.0.0.1:{port}/hello.txt"),
+        )
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 204);
+}
+
+#[tokio::test]
+async fn test_webdav_move() {
+    let dir = setup_test_dir();
+    let (port, _state) = start_dav_server(dir.path(), true).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .request(
+            reqwest::Method::from_bytes(b"MOVE").unwrap(),
+            format!("http://127.0.0.1:{port}/hello.txt"),
+        )
+        .header("Destination", format!("http://127.0.0.1:{port}/moved.txt"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 201);
+    assert!(!dir.path().join("hello.txt").exists());
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("moved.txt")).unwrap(),
+        "hello world\n"
+    );
+}
+
+#[tokio::test]
+async fn test_webdav_copy() {
+    let dir = setup_test_dir();
+    let (port, _state) = start_dav_server(dir.path(), true).await;
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .request(
+            reqwest::Method::from_bytes(b"COPY").unwrap(),
+            format!("http://127.0.0.1:{port}/hello.txt"),
+        )
+        .header("Destination", format!("http://127.0.0.1:{port}/copied.txt"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 201);
+    assert!(dir.path().join("hello.txt").exists());
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("copied.txt")).unwrap(),
+        "hello world\n"
+    );
 }
