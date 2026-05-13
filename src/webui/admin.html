@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>serve &mdash; admin</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', monospace;
+    padding: 1.5rem;
+    min-height: 100vh;
+}
+.container { max-width: 960px; margin: 0 auto; }
+h1 { color: #f0883e; font-size: 1.3rem; margin-bottom: 0.5rem; }
+h2 { color: #f0883e; font-size: 0.9rem; margin: 1.5rem 0 0.5rem; font-weight: 400; }
+h2::before { content: "## "; color: #6e7681; }
+.urls { margin: 1rem 0; }
+.urls a {
+    display: block;
+    color: #58a6ff;
+    text-decoration: none;
+    padding: 0.2rem 0;
+    font-size: 0.9rem;
+}
+.urls a:hover { text-decoration: underline; }
+.panel {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 0.8rem 1rem;
+    margin: 0.5rem 0;
+}
+.panel .empty { color: #6e7681; font-size: 0.8rem; }
+table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+th {
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    color: #f0883e;
+    border-bottom: 1px solid #30363d;
+    font-weight: 400;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+}
+td { padding: 0.3rem 0.6rem; border-bottom: 1px solid #21262d; }
+.ip { color: #58a6ff; }
+.file { color: #7ee787; }
+.muted { color: #8b949e; }
+.dim { color: #6e7681; }
+.uptime {
+    margin-top: 1.5rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid #30363d;
+    color: #6e7681;
+    font-size: 0.75rem;
+}
+.uptime .value { color: #7ee787; }
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #7ee787;
+    margin-right: 0.5rem;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1><span style="color:#f0883e">serve</span> admin</h1>
+    <p class="dim"><span class="status-dot"></span><span id="conn-status">connecting...</span></p>
+
+    <h2>Server URLs</h2>
+    <div class="urls" id="urls"></div>
+
+    <h2>Clients</h2>
+    <div class="panel" id="clients-panel">
+        <p class="empty">No clients connected</p>
+    </div>
+
+    <h2>Downloads</h2>
+    <div class="panel" id="downloads-panel">
+        <p class="empty">No active downloads</p>
+    </div>
+
+    <div class="uptime">
+        uptime: <span class="value" id="uptime">00:00:00</span>
+    </div>
+</div>
+<script>
+function connect() {
+    const ws = new WebSocket('ws://' + location.host + '/ws');
+    ws.onopen = () => {
+        document.getElementById('conn-status').textContent = 'connected';
+        document.querySelector('.status-dot').style.background = '#7ee787';
+    };
+    ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        updateUrls(data.urls);
+        updateClients(data.clients);
+        updateDownloads(data.downloads);
+        document.getElementById('uptime').textContent = data.uptime;
+    };
+    ws.onclose = () => {
+        document.querySelector('.status-dot').style.background = '#f85149';
+        document.getElementById('conn-status').textContent = 'disconnected — reconnecting...';
+        setTimeout(connect, 2000);
+    };
+}
+connect();
+
+function updateUrls(urls) {
+    const el = document.getElementById('urls');
+    el.innerHTML = urls.map(u => '<a href="' + u + '" target="_blank">' + u + '</a>').join('');
+}
+
+function updateClients(clients) {
+    const el = document.getElementById('clients-panel');
+    if (!clients.length) {
+        el.innerHTML = '<p class="empty">No clients connected</p>';
+        return;
+    }
+    let html = '<table><tr><th>IP</th><th>User-Agent</th><th>Last Seen</th></tr>';
+    for (const c of clients) {
+        html += '<tr><td class="ip">' + c.ip + '</td><td class="muted">' + c.user_agent + '</td><td class="dim">' + c.last_seen + '</td></tr>';
+    }
+    el.innerHTML = html + '</table>';
+}
+
+function updateDownloads(downloads) {
+    const el = document.getElementById('downloads-panel');
+    if (!downloads.length) {
+        el.innerHTML = '<p class="empty">No active downloads</p>';
+        return;
+    }
+    let html = '<table><tr><th>File</th><th>Client</th><th>Progress</th></tr>';
+    for (const d of downloads) {
+        const pct = d.total > 0 ? Math.round(d.sent * 100 / d.total) + '%' : '?';
+        html += '<tr><td class="file">' + d.file + '</td><td class="ip">' + d.client + '</td><td style="color:#f0883e">' + pct + '</td></tr>';
+    }
+    el.innerHTML = html + '</table>';
+}
+</script>
+</body>
+</html>

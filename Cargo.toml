@@ -1,0 +1,41 @@
+[package]
+name = "serve"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { version = "0.8", features = ["multipart", "ws"] }
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+base64 = "0.22"
+bytes = "1"
+chrono = "0.4"
+clap = { version = "4", features = ["derive"] }
+crossterm = { version = "0.28", features = ["event-stream"] }
+futures = "0.3"
+http-body = "1"
+http-body-util = "0.1"
+humansize = "2"
+hyper = { version = "1", features = ["full"] }
+mime_guess = "2"
+network-interface = "2"
+open = "5"
+percent-encoding = "2"
+ratatui = "0.29"
+rustls = "0.23"
+rustls-pemfile = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = "0.24"
+tokio-util = { version = "0.7", features = ["io"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["cors", "set-header"] }
+url = "2"
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+strip = true
+lto = true
