@@ -32,6 +32,7 @@ pub struct AppState {
     pub webui_port: Option<u16>,
     pub interfaces: Vec<NetIface>,
     pub auth: Option<(String, String)>,
+    pub dav_auth: Option<(String, String)>,
     pub cors: bool,
     pub upload: bool,
     pub max_upload_bytes: usize,
@@ -55,6 +56,7 @@ impl AppState {
         max_upload_bytes: usize,
         dav_port: Option<u16>,
         dav_rw: bool,
+        dav_auth: Option<(String, String)>,
     ) -> Arc<Self> {
         let (shutdown, _) = broadcast::channel(1);
         Arc::new(Self {
@@ -65,6 +67,7 @@ impl AppState {
             webui_port,
             interfaces,
             auth,
+            dav_auth,
             cors,
             upload,
             max_upload_bytes,
@@ -126,5 +129,29 @@ impl AppState {
 
     pub async fn remove_download(&self, id: &str) {
         self.downloads.write().await.remove(id);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_appstate_carries_dav_auth() {
+        let state = AppState::new(
+            std::env::temp_dir(),
+            4701,
+            None,
+            None,
+            vec![NetIface { name: "lo".into(), ip: std::net::IpAddr::from([127, 0, 0, 1]) }],
+            None,
+            false,
+            false,
+            2048 * 1024 * 1024,
+            Some(5001),
+            false,
+            Some(("u".into(), "p".into())),
+        );
+        assert_eq!(state.dav_auth.as_ref().map(|(u, _)| u.as_str()), Some("u"));
     }
 }

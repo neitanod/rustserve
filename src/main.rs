@@ -88,6 +88,7 @@ async fn main() {
         cli.max_upload_size * 1024 * 1024,
         dav_port,
         cli.webdav_rw,
+        None,
     );
 
     let router = server::build_router(state.clone());

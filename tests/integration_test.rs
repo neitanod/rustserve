@@ -28,6 +28,7 @@ async fn start_dav_server(dir: &std::path::Path, rw: bool) -> (u16, Arc<AppState
         2048 * 1024 * 1024,
         Some(port),
         rw,
+        None,
     );
 
     let router = serve::server::webdav::build_webdav_router(state.clone());
@@ -66,6 +67,7 @@ async fn start_test_server(dir: &std::path::Path, upload: bool) -> (u16, Arc<App
         2048 * 1024 * 1024,
         None,
         false,
+        None,
     );
 
     let router = server::build_router(state.clone());
@@ -104,6 +106,7 @@ async fn start_auth_server(dir: &std::path::Path, user: &str, pass: &str) -> u16
         2048 * 1024 * 1024,
         None,
         false,
+        None,
     );
 
     let router = server::build_router(state);
