@@ -24,7 +24,7 @@ pub fn build_webdav_router(state: Arc<AppState>) -> Router {
         router = router.layer(super::upload::upload_body_limit(state.max_upload_bytes));
     }
 
-    if let Some((ref user, ref pass)) = state.auth {
+    if let Some((ref user, ref pass)) = state.dav_auth {
         let u = user.clone();
         let p = pass.clone();
         router = router.layer(axum::middleware::from_fn(move |req, next| {

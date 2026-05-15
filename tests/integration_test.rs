@@ -658,6 +658,109 @@ async fn test_webdav_move() {
     );
 }
 
+async fn start_dav_server_with_auth(
+    dir: &std::path::Path,
+    rw: bool,
+    user: &str,
+    pass: &str,
+) -> (u16, Arc<AppState>) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    let interfaces = vec![NetIface {
+        name: "lo".into(),
+        ip: std::net::IpAddr::from([127, 0, 0, 1]),
+    }];
+
+    let state = AppState::new(
+        dir.canonicalize().unwrap(),
+        0,
+        None,
+        None,
+        interfaces,
+        None,
+        false,
+        false,
+        2048 * 1024 * 1024,
+        Some(port),
+        rw,
+        Some((user.into(), pass.into())),
+    );
+
+    let router = serve::server::webdav::build_webdav_router(state.clone());
+
+    tokio::spawn(async move {
+        let _ = axum::serve(
+            listener,
+            router.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .await;
+    });
+
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    (port, state)
+}
+
+#[tokio::test]
+async fn webdav_without_auth_returns_401() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let (port, _state) = start_dav_server_with_auth(tmp.path(), false, "u", "p").await;
+
+    let status = tokio::task::spawn_blocking(move || {
+        let client = reqwest::blocking::Client::new();
+        client
+            .get(format!("http://127.0.0.1:{port}/"))
+            .send()
+            .unwrap()
+            .status()
+            .as_u16()
+    })
+    .await
+    .unwrap();
+    assert_eq!(status, 401);
+}
+
+#[tokio::test]
+async fn webdav_with_correct_auth_returns_200() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    std::fs::write(tmp.path().join("index.html"), "hi").unwrap();
+    let (port, _state) = start_dav_server_with_auth(tmp.path(), false, "u", "p").await;
+
+    let status = tokio::task::spawn_blocking(move || {
+        let client = reqwest::blocking::Client::new();
+        client
+            .get(format!("http://127.0.0.1:{port}/"))
+            .basic_auth("u", Some("p"))
+            .send()
+            .unwrap()
+            .status()
+            .as_u16()
+    })
+    .await
+    .unwrap();
+    assert_eq!(status, 200);
+}
+
+#[tokio::test]
+async fn webdav_with_wrong_auth_returns_401() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let (port, _state) = start_dav_server_with_auth(tmp.path(), false, "u", "p").await;
+
+    let status = tokio::task::spawn_blocking(move || {
+        let client = reqwest::blocking::Client::new();
+        client
+            .get(format!("http://127.0.0.1:{port}/"))
+            .basic_auth("u", Some("WRONG"))
+            .send()
+            .unwrap()
+            .status()
+            .as_u16()
+    })
+    .await
+    .unwrap();
+    assert_eq!(status, 401);
+}
+
 #[tokio::test]
 async fn test_webdav_copy() {
     let dir = setup_test_dir();
