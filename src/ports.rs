@@ -1,12 +1,19 @@
 use std::net::TcpListener;
 
-pub fn find_port(default: u16, explicit: Option<u16>) -> Result<u16, String> {
+pub fn find_port(default: u16, explicit: Option<u16>, strict: bool) -> Result<u16, String> {
     match explicit {
         Some(port) => {
             if is_port_available(port) {
                 Ok(port)
             } else {
                 Err(format!("port {port} is already in use"))
+            }
+        }
+        None if strict => {
+            if is_port_available(default) {
+                Ok(default)
+            } else {
+                Err(format!("port {default} is already in use (strict mode)"))
             }
         }
         None => find_free_port(default)
@@ -29,7 +36,7 @@ mod tests {
 
     #[test]
     fn test_find_free_port_from_default() {
-        let port = find_port(19876, None).unwrap();
+        let port = find_port(19876, None, false).unwrap();
         assert!(port >= 19876);
         assert!(is_port_available(port));
     }
@@ -37,14 +44,34 @@ mod tests {
     #[test]
     fn test_explicit_port_busy() {
         let _listener = TcpListener::bind(("0.0.0.0", 19877)).unwrap();
-        let result = find_port(19877, Some(19877));
+        let result = find_port(19877, Some(19877), false);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_auto_skips_busy_port() {
         let _listener = TcpListener::bind(("0.0.0.0", 19878)).unwrap();
-        let port = find_port(19878, None).unwrap();
+        let port = find_port(19878, None, false).unwrap();
         assert!(port > 19878);
+    }
+
+    #[test]
+    fn test_strict_default_busy_fails() {
+        let _listener = TcpListener::bind(("0.0.0.0", 19879)).unwrap();
+        let result = find_port(19879, None, true);
+        assert!(result.is_err(), "strict mode must not look for the next free port");
+    }
+
+    #[test]
+    fn test_strict_default_free_returns_default() {
+        let port = find_port(19880, None, true).unwrap();
+        assert_eq!(port, 19880);
+    }
+
+    #[test]
+    fn test_non_strict_default_busy_finds_next() {
+        let _listener = TcpListener::bind(("0.0.0.0", 19881)).unwrap();
+        let port = find_port(19881, None, false).unwrap();
+        assert!(port > 19881);
     }
 }

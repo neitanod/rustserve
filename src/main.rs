@@ -33,13 +33,13 @@ async fn main() {
         std::process::exit(1);
     }
 
-    let http_port = find_port(4701, cli.port).unwrap_or_else(|e| {
+    let http_port = find_port(4701, cli.port, false).unwrap_or_else(|e| {
         eprintln!("Error: {e}");
         std::process::exit(1);
     });
 
     let https_port = if cli.cert.is_some() {
-        Some(find_port(4801, cli.port_ssl).unwrap_or_else(|e| {
+        Some(find_port(4801, cli.port_ssl, false).unwrap_or_else(|e| {
             eprintln!("Error: {e}");
             std::process::exit(1);
         }))
@@ -48,7 +48,7 @@ async fn main() {
     };
 
     let webui_port = if cli.web_monitor {
-        Some(find_port(4901, cli.port_gui).unwrap_or_else(|e| {
+        Some(find_port(4901, cli.port_gui, false).unwrap_or_else(|e| {
             eprintln!("Error: {e}");
             std::process::exit(1);
         }))
@@ -58,7 +58,7 @@ async fn main() {
 
     let webdav = cli.webdav || cli.webdav_rw;
     let dav_port = if webdav {
-        Some(find_port(5001, cli.port_dav).unwrap_or_else(|e| {
+        Some(find_port(5001, cli.port_dav, false).unwrap_or_else(|e| {
             eprintln!("Error: {e}");
             std::process::exit(1);
         }))
