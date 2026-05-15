@@ -53,10 +53,7 @@ pub async fn run_webdav(router: Router, port: u16) -> std::io::Result<()> {
     .await
 }
 
-async fn webdav_dispatch(
-    State(state): State<Arc<AppState>>,
-    req: Request,
-) -> Response {
+async fn webdav_dispatch(State(state): State<Arc<AppState>>, req: Request) -> Response {
     let method = req.method().clone();
 
     if method == Method::GET || method == Method::HEAD {
@@ -304,8 +301,7 @@ async fn dav_copy(state: &AppState, uri: &Uri, headers: &HeaderMap) -> Response 
     let src_clone = src.clone();
     let dst_clone = dst.clone();
 
-    let result =
-        tokio::task::spawn_blocking(move || copy_recursive(&src_clone, &dst_clone)).await;
+    let result = tokio::task::spawn_blocking(move || copy_recursive(&src_clone, &dst_clone)).await;
 
     match result {
         Ok(Ok(())) => {

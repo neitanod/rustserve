@@ -1,14 +1,16 @@
 pub mod app;
 pub mod ui;
 
-use std::sync::Arc;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseEventKind},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseEventKind,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::prelude::*;
 use ratatui::Terminal;
+use std::sync::Arc;
 
 use crate::state::AppState;
 use app::TuiApp;

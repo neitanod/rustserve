@@ -2,8 +2,8 @@ use ratatui::prelude::*;
 use ratatui::widgets::*;
 use std::sync::Arc;
 
-use crate::state::{AppState, ClientInfo, DownloadInfo};
 use super::app::{Panel, TuiApp};
+use crate::state::{AppState, ClientInfo, DownloadInfo};
 
 pub fn draw_ui(
     frame: &mut Frame,
@@ -34,9 +34,7 @@ fn draw_header(frame: &mut Frame, state: &Arc<AppState>, area: Rect) {
         Line::from(vec![
             Span::styled(
                 "serve ",
-                Style::default()
-                    .fg(Color::Rgb(240, 136, 62))
-                    .bold(),
+                Style::default().fg(Color::Rgb(240, 136, 62)).bold(),
             ),
             Span::styled(
                 "file server",
@@ -109,12 +107,7 @@ fn draw_panels(
     draw_downloads_panel(frame, tui_app, downloads, panels[1]);
 }
 
-fn draw_clients_panel(
-    frame: &mut Frame,
-    tui_app: &TuiApp,
-    clients: &[ClientInfo],
-    area: Rect,
-) {
+fn draw_clients_panel(frame: &mut Frame, tui_app: &TuiApp, clients: &[ClientInfo], area: Rect) {
     let is_active = tui_app.active_panel == Panel::Clients;
     let border_color = if is_active {
         Color::Rgb(88, 166, 255)
@@ -137,8 +130,7 @@ fn draw_clients_panel(
         .map(|c| {
             let elapsed = c.last_seen.elapsed().as_secs();
             Row::new(vec![
-                Cell::from(c.ip.to_string())
-                    .style(Style::default().fg(Color::Rgb(88, 166, 255))),
+                Cell::from(c.ip.to_string()).style(Style::default().fg(Color::Rgb(88, 166, 255))),
                 Cell::from(c.user_agent.chars().take(30).collect::<String>())
                     .style(Style::default().fg(Color::Rgb(139, 148, 158))),
                 Cell::from(format!("{elapsed}s ago"))
@@ -208,8 +200,7 @@ fn draw_downloads_panel(
                     .style(Style::default().fg(Color::Rgb(126, 231, 135))),
                 Cell::from(d.client_ip.to_string())
                     .style(Style::default().fg(Color::Rgb(88, 166, 255))),
-                Cell::from(progress)
-                    .style(Style::default().fg(Color::Rgb(240, 136, 62))),
+                Cell::from(progress).style(Style::default().fg(Color::Rgb(240, 136, 62))),
             ])
         })
         .collect();
@@ -246,10 +237,7 @@ fn draw_footer(frame: &mut Frame, state: &Arc<AppState>, area: Rect) {
         .style(Style::default().bg(Color::Rgb(13, 17, 23)));
 
     let line = Line::from(vec![
-        Span::styled(
-            " uptime: ",
-            Style::default().fg(Color::Rgb(110, 118, 129)),
-        ),
+        Span::styled(" uptime: ", Style::default().fg(Color::Rgb(110, 118, 129))),
         Span::styled(uptime, Style::default().fg(Color::Rgb(126, 231, 135))),
         Span::styled(
             "   q: quit  tab: switch panel  \u{2191}\u{2193}: scroll",

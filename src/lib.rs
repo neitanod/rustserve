@@ -1,5 +1,5 @@
-pub mod logging;
 pub mod cli;
+pub mod logging;
 pub mod network;
 pub mod ports;
 pub mod server;

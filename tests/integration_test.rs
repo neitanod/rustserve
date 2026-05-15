@@ -150,9 +150,15 @@ async fn test_directory_listing() {
     assert_eq!(resp.status(), 200);
 
     let body = resp.text().await.unwrap();
-    assert!(body.contains("hello.txt"), "listing should contain hello.txt");
+    assert!(
+        body.contains("hello.txt"),
+        "listing should contain hello.txt"
+    );
     assert!(body.contains("subdir"), "listing should contain subdir/");
-    assert!(body.contains("#0d1117"), "listing should have ip1.cc bg color");
+    assert!(
+        body.contains("#0d1117"),
+        "listing should have ip1.cc bg color"
+    );
     assert!(
         body.contains("serve"),
         "listing should contain the serve branding"
@@ -176,7 +182,10 @@ async fn test_file_download() {
         .to_str()
         .unwrap()
         .to_string();
-    assert!(ct.contains("text/plain"), "content-type should be text/plain");
+    assert!(
+        ct.contains("text/plain"),
+        "content-type should be text/plain"
+    );
 
     let body = resp.text().await.unwrap();
     assert_eq!(body, "hello world\n");
@@ -290,7 +299,11 @@ async fn test_accept_ranges_header() {
         .await
         .unwrap();
     assert_eq!(
-        resp.headers().get("accept-ranges").unwrap().to_str().unwrap(),
+        resp.headers()
+            .get("accept-ranges")
+            .unwrap()
+            .to_str()
+            .unwrap(),
         "bytes"
     );
 }
@@ -344,8 +357,7 @@ async fn test_upload_disabled_by_default() {
     let (port, _state) = start_test_server(dir.path(), false).await;
 
     let client = reqwest::Client::new();
-    let form = reqwest::multipart::Form::new()
-        .text("file", "test content");
+    let form = reqwest::multipart::Form::new().text("file", "test content");
     let resp = client
         .post(format!("http://127.0.0.1:{port}/"))
         .multipart(form)
@@ -360,8 +372,8 @@ async fn test_upload_enabled() {
     let dir = setup_test_dir();
     let (port, _state) = start_test_server(dir.path(), true).await;
 
-    let file_part = reqwest::multipart::Part::bytes(b"uploaded content".to_vec())
-        .file_name("uploaded.txt");
+    let file_part =
+        reqwest::multipart::Part::bytes(b"uploaded content".to_vec()).file_name("uploaded.txt");
     let form = reqwest::multipart::Form::new().part("file", file_part);
 
     let client = reqwest::Client::builder()
@@ -448,7 +460,10 @@ async fn test_subdir_listing() {
         body.contains("nested.txt"),
         "subdir listing should contain nested.txt"
     );
-    assert!(body.contains(".."), "subdir listing should have parent link");
+    assert!(
+        body.contains(".."),
+        "subdir listing should have parent link"
+    );
 }
 
 #[tokio::test]
@@ -458,7 +473,10 @@ async fn test_webdav_options() {
 
     let client = reqwest::Client::new();
     let resp = client
-        .request(reqwest::Method::OPTIONS, format!("http://127.0.0.1:{port}/"))
+        .request(
+            reqwest::Method::OPTIONS,
+            format!("http://127.0.0.1:{port}/"),
+        )
         .send()
         .await
         .unwrap();
@@ -494,7 +512,10 @@ async fn test_webdav_propfind_root() {
     assert!(body.contains("<D:multistatus"), "should be XML multistatus");
     assert!(body.contains("hello.txt"), "should list hello.txt");
     assert!(body.contains("subdir"), "should list subdir");
-    assert!(body.contains("<D:collection/>"), "subdir should be collection");
+    assert!(
+        body.contains("<D:collection/>"),
+        "subdir should be collection"
+    );
 }
 
 #[tokio::test]
@@ -515,8 +536,14 @@ async fn test_webdav_propfind_depth0() {
     assert_eq!(resp.status(), 207);
 
     let body = resp.text().await.unwrap();
-    assert!(body.contains("<D:collection/>"), "root should be collection");
-    assert!(!body.contains("hello.txt"), "depth 0 should not list children");
+    assert!(
+        body.contains("<D:collection/>"),
+        "root should be collection"
+    );
+    assert!(
+        !body.contains("hello.txt"),
+        "depth 0 should not list children"
+    );
 }
 
 #[tokio::test]

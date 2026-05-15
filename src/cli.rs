@@ -109,12 +109,7 @@ impl Cli {
         if self.web_ssl && (self.cert.is_none() || self.key.is_none()) {
             return Err("--web-ssl requires --cert and --key".into());
         }
-        if self.daemon
-            && !self.web
-            && !self.web_monitor
-            && !self.webdav
-            && !self.webdav_rw
-        {
+        if self.daemon && !self.web && !self.web_monitor && !self.webdav && !self.webdav_rw {
             return Err(
                 "--daemon requires at least one service: --web, --web-monitor, --webdav or --webdav-rw".into(),
             );
@@ -122,9 +117,7 @@ impl Cli {
         if self.dav_user.is_some() != self.dav_pass.is_some() {
             return Err("--dav-user and --dav-pass must be used together".into());
         }
-        if (self.webdav || self.webdav_rw)
-            && (self.dav_user.is_none() || self.dav_pass.is_none())
-        {
+        if (self.webdav || self.webdav_rw) && (self.dav_user.is_none() || self.dav_pass.is_none()) {
             return Err("--webdav requires --dav-user and --dav-pass".into());
         }
         Ok(())
@@ -217,7 +210,10 @@ mod tests {
         let mut cli = base_cli();
         cli.web = true;
         cli.web_ssl = true;
-        assert!(cli.validate().is_err(), "--web-ssl without --cert/--key must fail");
+        assert!(
+            cli.validate().is_err(),
+            "--web-ssl without --cert/--key must fail"
+        );
     }
 
     #[test]

@@ -1,7 +1,7 @@
-use std::path::Path;
-use std::time::SystemTime;
 use chrono::{DateTime, Local};
 use humansize::{format_size, BINARY};
+use std::path::Path;
+use std::time::SystemTime;
 
 pub struct FileEntry {
     pub name: String,

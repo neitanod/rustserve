@@ -13,11 +13,7 @@ use uuid::Uuid;
 
 use crate::state::AppState;
 
-pub async fn tracking_middleware(
-    state: Arc<AppState>,
-    req: Request,
-    next: Next,
-) -> Response {
+pub async fn tracking_middleware(state: Arc<AppState>, req: Request, next: Next) -> Response {
     let client_ip = req
         .extensions()
         .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()

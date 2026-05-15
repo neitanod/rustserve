@@ -59,7 +59,10 @@ mod tests {
     fn test_strict_default_busy_fails() {
         let _listener = TcpListener::bind(("0.0.0.0", 19879)).unwrap();
         let result = find_port(19879, None, true);
-        assert!(result.is_err(), "strict mode must not look for the next free port");
+        assert!(
+            result.is_err(),
+            "strict mode must not look for the next free port"
+        );
     }
 
     #[test]

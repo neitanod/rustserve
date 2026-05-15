@@ -7,14 +7,11 @@ use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio_util::io::ReaderStream;
 
-use crate::state::AppState;
 use super::listing::{render_listing, scan_directory};
 use super::security::{validate_path, SecurityError};
+use crate::state::AppState;
 
-pub async fn handle_request(
-    State(state): State<Arc<AppState>>,
-    req: Request,
-) -> Response {
+pub async fn handle_request(State(state): State<Arc<AppState>>, req: Request) -> Response {
     let request_path = req.uri().path().to_string();
     let range_header = req
         .headers()
@@ -43,9 +40,7 @@ pub async fn handle_request(
                 serve_file(&full_path, range_header.as_deref()).await
             }
         }
-        Err(SecurityError::NotFound) => {
-            (StatusCode::NOT_FOUND, "Not found").into_response()
-        }
+        Err(SecurityError::NotFound) => (StatusCode::NOT_FOUND, "Not found").into_response(),
         Err(SecurityError::TraversalAttempt) => {
             (StatusCode::FORBIDDEN, "Forbidden").into_response()
         }
@@ -71,9 +66,7 @@ async fn serve_file(path: &std::path::Path, range: Option<&str>) -> Response {
             let len = end - start + 1;
             let mut file = match File::open(path).await {
                 Ok(f) => f,
-                Err(_) => {
-                    return (StatusCode::INTERNAL_SERVER_ERROR, "Read error").into_response()
-                }
+                Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Read error").into_response(),
             };
             if file.seek(std::io::SeekFrom::Start(start)).await.is_err() {
                 return (StatusCode::INTERNAL_SERVER_ERROR, "Seek error").into_response();

@@ -51,10 +51,7 @@ async fn admin_page() -> impl IntoResponse {
     Html(assets::ADMIN_HTML)
 }
 
-async fn ws_handler(
-    ws: WebSocketUpgrade,
-    State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> impl IntoResponse {
     ws.on_upgrade(|socket| ws_connection(socket, state))
 }
 

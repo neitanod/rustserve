@@ -23,10 +23,7 @@ pub fn multistatus(entries: &[DavEntry]) -> String {
 
 fn write_response(xml: &mut String, entry: &DavEntry) {
     xml.push_str("<D:response>\n");
-    xml.push_str(&format!(
-        "<D:href>{}</D:href>\n",
-        xml_escape(&entry.href)
-    ));
+    xml.push_str(&format!("<D:href>{}</D:href>\n", xml_escape(&entry.href)));
     xml.push_str("<D:propstat>\n<D:prop>\n");
     xml.push_str(&format!(
         "<D:displayname>{}</D:displayname>\n",
