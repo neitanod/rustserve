@@ -28,6 +28,10 @@ pub struct Cli {
     #[arg(long)]
     pub web: bool,
 
+    /// Enable HTTPS file server (requires --web, --cert and --key)
+    #[arg(long)]
+    pub web_ssl: bool,
+
     /// Enable monitoring panel (web UI)
     #[arg(long)]
     pub web_monitor: bool,
@@ -87,6 +91,12 @@ impl Cli {
                 return Err(format!("key file not found: {}", key.display()));
             }
         }
+        if self.web_ssl && !self.web {
+            return Err("--web-ssl requires --web".into());
+        }
+        if self.web_ssl && (self.cert.is_none() || self.key.is_none()) {
+            return Err("--web-ssl requires --cert and --key".into());
+        }
         Ok(())
     }
 }
@@ -103,6 +113,7 @@ mod tests {
             cert: None,
             key: None,
             web: false,
+            web_ssl: false,
             web_monitor: false,
             port_gui: None,
             user: None,
@@ -157,5 +168,39 @@ mod tests {
     fn test_parse_no_web_flag_defaults_false() {
         let cli = Cli::try_parse_from(["serve"]).unwrap();
         assert!(!cli.web);
+    }
+
+    #[test]
+    fn test_web_ssl_requires_web() {
+        let mut cli = base_cli();
+        cli.web_ssl = true;
+        cli.cert = Some("/tmp/cert.pem".into());
+        cli.key = Some("/tmp/key.pem".into());
+        assert!(cli.validate().is_err(), "--web-ssl without --web must fail");
+    }
+
+    #[test]
+    fn test_web_ssl_requires_cert_and_key() {
+        let mut cli = base_cli();
+        cli.web = true;
+        cli.web_ssl = true;
+        assert!(cli.validate().is_err(), "--web-ssl without --cert/--key must fail");
+    }
+
+    #[test]
+    fn test_web_ssl_with_web_and_cert_key_ok() {
+        use tempfile;
+        let tmp = tempfile::tempdir().unwrap();
+        let cert = tmp.path().join("cert.pem");
+        let key = tmp.path().join("key.pem");
+        std::fs::write(&cert, "").unwrap();
+        std::fs::write(&key, "").unwrap();
+
+        let mut cli = base_cli();
+        cli.web = true;
+        cli.web_ssl = true;
+        cli.cert = Some(cert);
+        cli.key = Some(key);
+        assert!(cli.validate().is_ok());
     }
 }
