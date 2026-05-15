@@ -39,3 +39,41 @@ fn daemon_with_port_busy_fails_strict() {
         .assert()
         .failure();
 }
+
+#[test]
+fn daemon_logs_listening_lines() {
+    let tmp = TempDir::new().unwrap();
+    let http_port = free_port();
+    let dav_port = free_port();
+
+    let output = Command::cargo_bin("serve")
+        .unwrap()
+        .args([
+            tmp.path().to_str().unwrap(),
+            "--daemon",
+            "--web",
+            "--port",
+            &http_port.to_string(),
+            "--webdav",
+            "--port-dav",
+            &dav_port.to_string(),
+            "--dav-user",
+            "u",
+            "--dav-pass",
+            "p",
+        ])
+        .timeout(std::time::Duration::from_secs(3))
+        .assert()
+        .get_output()
+        .clone();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(&format!("INFO http: listening on 0.0.0.0:{http_port}")),
+        "missing http listening line, stderr was: {stderr}"
+    );
+    assert!(
+        stderr.contains(&format!("INFO webdav: listening on 0.0.0.0:{dav_port}")),
+        "missing webdav listening line, stderr was: {stderr}"
+    );
+}

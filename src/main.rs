@@ -1,4 +1,5 @@
 mod cli;
+mod logging;
 mod network;
 mod ports;
 mod server;
@@ -8,6 +9,7 @@ mod webui;
 
 use clap::Parser;
 use cli::Cli;
+use logging::log_info;
 use network::local_interfaces;
 use ports::find_port;
 use state::AppState;
@@ -111,6 +113,7 @@ async fn main() {
     if let Some(p) = http_port {
         let router = server::build_router(state.clone());
         tokio::spawn(server::run_http(router, p));
+        log_info("http", &format!("listening on 0.0.0.0:{p}"));
     }
 
     if let (Some(ssl_port), Some(ref cert_path), Some(ref key_path)) =
@@ -124,11 +127,13 @@ async fn main() {
                 eprintln!("HTTPS error: {e}");
             }
         });
+        log_info("https", &format!("listening on 0.0.0.0:{ssl_port}"));
     }
 
     if let Some(dp) = dav_port {
         let dav_router = server::webdav::build_webdav_router(state.clone());
         tokio::spawn(server::webdav::run_webdav(dav_router, dp));
+        log_info("webdav", &format!("listening on 0.0.0.0:{dp}"));
     }
 
     if let Some(gui_port) = webui_port {
@@ -138,6 +143,7 @@ async fn main() {
                 eprintln!("Web UI error: {e}");
             }
         });
+        log_info("monitor", &format!("listening on 0.0.0.0:{gui_port}"));
         if !cli.daemon {
             let gui_url = format!("http://127.0.0.1:{gui_port}");
             let _ = open::that(&gui_url);
@@ -145,7 +151,7 @@ async fn main() {
     }
 
     if cli.daemon {
-        eprintln!("serve daemon running (press Ctrl+C to stop)");
+        log_info("serve", "daemon running, press Ctrl+C to stop");
         tokio::signal::ctrl_c().await.ok();
     } else if std::io::IsTerminal::is_terminal(&std::io::stdout()) {
         if let Err(e) = tui::run_tui(state.clone()).await {
