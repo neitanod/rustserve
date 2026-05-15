@@ -72,6 +72,14 @@ pub struct Cli {
     #[arg(long)]
     pub port_dav: Option<u16>,
 
+    /// WebDAV basic-auth user (required when --webdav or --webdav-rw)
+    #[arg(long)]
+    pub dav_user: Option<String>,
+
+    /// WebDAV basic-auth password (required when --webdav or --webdav-rw)
+    #[arg(long)]
+    pub dav_pass: Option<String>,
+
     /// Run as background service: no TUI, no port auto-find, no implicit services
     #[arg(long)]
     pub daemon: bool,
@@ -111,6 +119,14 @@ impl Cli {
                 "--daemon requires at least one service: --web, --web-monitor, --webdav or --webdav-rw".into(),
             );
         }
+        if self.dav_user.is_some() != self.dav_pass.is_some() {
+            return Err("--dav-user and --dav-pass must be used together".into());
+        }
+        if (self.webdav || self.webdav_rw)
+            && (self.dav_user.is_none() || self.dav_pass.is_none())
+        {
+            return Err("--webdav requires --dav-user and --dav-pass".into());
+        }
         Ok(())
     }
 }
@@ -139,6 +155,8 @@ mod tests {
             webdav_rw: false,
             port_dav: None,
             daemon: false,
+            dav_user: None,
+            dav_pass: None,
         }
     }
 
@@ -245,6 +263,43 @@ mod tests {
     #[test]
     fn test_console_no_flags_ok() {
         let cli = base_cli();
+        assert!(cli.validate().is_ok());
+    }
+
+    #[test]
+    fn test_dav_user_without_pass_fails() {
+        let mut cli = base_cli();
+        cli.dav_user = Some("u".into());
+        assert!(cli.validate().is_err());
+    }
+
+    #[test]
+    fn test_dav_pass_without_user_fails() {
+        let mut cli = base_cli();
+        cli.dav_pass = Some("p".into());
+        assert!(cli.validate().is_err());
+    }
+
+    #[test]
+    fn test_webdav_without_dav_creds_fails() {
+        let mut cli = base_cli();
+        cli.webdav = true;
+        assert!(cli.validate().is_err());
+    }
+
+    #[test]
+    fn test_webdav_rw_without_dav_creds_fails() {
+        let mut cli = base_cli();
+        cli.webdav_rw = true;
+        assert!(cli.validate().is_err());
+    }
+
+    #[test]
+    fn test_webdav_with_dav_creds_ok() {
+        let mut cli = base_cli();
+        cli.webdav = true;
+        cli.dav_user = Some("u".into());
+        cli.dav_pass = Some("p".into());
         assert!(cli.validate().is_ok());
     }
 }
