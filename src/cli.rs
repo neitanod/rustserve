@@ -71,6 +71,10 @@ pub struct Cli {
     /// WebDAV port (default: auto-find from 5001)
     #[arg(long)]
     pub port_dav: Option<u16>,
+
+    /// Run as background service: no TUI, no port auto-find, no implicit services
+    #[arg(long)]
+    pub daemon: bool,
 }
 
 impl Cli {
@@ -96,6 +100,16 @@ impl Cli {
         }
         if self.web_ssl && (self.cert.is_none() || self.key.is_none()) {
             return Err("--web-ssl requires --cert and --key".into());
+        }
+        if self.daemon
+            && !self.web
+            && !self.web_monitor
+            && !self.webdav
+            && !self.webdav_rw
+        {
+            return Err(
+                "--daemon requires at least one service: --web, --web-monitor, --webdav or --webdav-rw".into(),
+            );
         }
         Ok(())
     }
@@ -124,6 +138,7 @@ mod tests {
             webdav: false,
             webdav_rw: false,
             port_dav: None,
+            daemon: false,
         }
     }
 
@@ -201,6 +216,35 @@ mod tests {
         cli.web_ssl = true;
         cli.cert = Some(cert);
         cli.key = Some(key);
+        assert!(cli.validate().is_ok());
+    }
+
+    #[test]
+    fn test_daemon_without_services_fails() {
+        let mut cli = base_cli();
+        cli.daemon = true;
+        assert!(cli.validate().is_err());
+    }
+
+    #[test]
+    fn test_daemon_with_web_ok() {
+        let mut cli = base_cli();
+        cli.daemon = true;
+        cli.web = true;
+        assert!(cli.validate().is_ok());
+    }
+
+    #[test]
+    fn test_daemon_with_web_monitor_ok() {
+        let mut cli = base_cli();
+        cli.daemon = true;
+        cli.web_monitor = true;
+        assert!(cli.validate().is_ok());
+    }
+
+    #[test]
+    fn test_console_no_flags_ok() {
+        let cli = base_cli();
         assert!(cli.validate().is_ok());
     }
 }
