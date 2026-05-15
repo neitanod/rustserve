@@ -24,9 +24,9 @@ pub struct Cli {
     #[arg(long)]
     pub key: Option<PathBuf>,
 
-    /// Enable Web UI admin panel
+    /// Enable monitoring panel (web UI)
     #[arg(long)]
-    pub web_ui: bool,
+    pub web_monitor: bool,
 
     /// Web UI port (default: auto-find from 4901)
     #[arg(long)]
@@ -98,7 +98,7 @@ mod tests {
             port_ssl: None,
             cert: None,
             key: None,
-            web_ui: false,
+            web_monitor: false,
             port_gui: None,
             user: None,
             pass: None,
@@ -128,5 +128,17 @@ mod tests {
     #[test]
     fn test_validate_ok_defaults() {
         assert!(base_cli().validate().is_ok());
+    }
+
+    #[test]
+    fn test_parse_web_monitor_flag() {
+        let cli = Cli::try_parse_from(["serve", "--web-monitor"]).unwrap();
+        assert!(cli.web_monitor);
+    }
+
+    #[test]
+    fn test_parse_web_ui_is_rejected() {
+        let result = Cli::try_parse_from(["serve", "--web-ui"]);
+        assert!(result.is_err(), "--web-ui must no longer be accepted");
     }
 }

@@ -47,7 +47,7 @@ async fn main() {
         None
     };
 
-    let webui_port = if cli.web_ui {
+    let webui_port = if cli.web_monitor {
         Some(find_port(4901, cli.port_gui).unwrap_or_else(|e| {
             eprintln!("Error: {e}");
             std::process::exit(1);
