@@ -9,7 +9,7 @@ mod webui;
 
 use clap::Parser;
 use cli::Cli;
-use logging::log_info;
+use logging::{log_error, log_info};
 use network::local_interfaces;
 use ports::find_port;
 use state::AppState;
@@ -23,7 +23,10 @@ async fn main() {
     }
 
     let root = std::fs::canonicalize(&cli.dir).unwrap_or_else(|e| {
-        eprintln!("Error: cannot resolve directory '{}': {e}", cli.dir.display());
+        eprintln!(
+            "Error: cannot resolve directory '{}': {e}",
+            cli.dir.display()
+        );
         std::process::exit(1);
     });
     if !root.is_dir() {
@@ -124,7 +127,7 @@ async fn main() {
         let k = key_path.clone();
         tokio::spawn(async move {
             if let Err(e) = server::run_https(router_ssl, ssl_port, &c, &k).await {
-                eprintln!("HTTPS error: {e}");
+                log_error("https", &format!("server error: {e}"));
             }
         });
         log_info("https", &format!("listening on 0.0.0.0:{ssl_port}"));
@@ -140,7 +143,7 @@ async fn main() {
         let webui_state = state.clone();
         tokio::spawn(async move {
             if let Err(e) = webui::run_webui(webui_state, gui_port).await {
-                eprintln!("Web UI error: {e}");
+                log_error("monitor", &format!("server error: {e}"));
             }
         });
         log_info("monitor", &format!("listening on 0.0.0.0:{gui_port}"));

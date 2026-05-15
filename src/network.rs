@@ -20,7 +20,7 @@ pub fn local_interfaces() -> Vec<NetIface> {
                 if ip.is_loopback() || ip.is_unspecified() {
                     continue;
                 }
-                if let IpAddr::V4(_) = ip {
+                if ip.is_ipv4() {
                     result.push(NetIface {
                         name: iface.name.clone(),
                         ip,

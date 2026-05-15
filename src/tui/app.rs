@@ -11,6 +11,12 @@ pub enum Panel {
     Downloads,
 }
 
+impl Default for TuiApp {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TuiApp {
     pub fn new() -> Self {
         Self {

@@ -11,6 +11,7 @@ use crate::network::NetIface;
 pub struct ClientInfo {
     pub ip: IpAddr,
     pub user_agent: String,
+    #[allow(dead_code)]
     pub connected_at: Instant,
     pub last_seen: Instant,
 }
@@ -21,6 +22,7 @@ pub struct DownloadInfo {
     pub client_ip: IpAddr,
     pub bytes_sent: u64,
     pub total_bytes: u64,
+    #[allow(dead_code)]
     pub started_at: Instant,
 }
 
@@ -29,6 +31,7 @@ pub struct AppState {
     pub start_time: Instant,
     pub http_port: u16,
     pub https_port: Option<u16>,
+    #[allow(dead_code)]
     pub webui_port: Option<u16>,
     pub interfaces: Vec<NetIface>,
     pub auth: Option<(String, String)>,
@@ -36,6 +39,7 @@ pub struct AppState {
     pub cors: bool,
     pub upload: bool,
     pub max_upload_bytes: usize,
+    #[allow(dead_code)]
     pub dav_port: Option<u16>,
     pub dav_rw: bool,
     pub clients: RwLock<HashMap<String, ClientInfo>>,
@@ -44,6 +48,7 @@ pub struct AppState {
 }
 
 impl AppState {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         root: PathBuf,
         http_port: u16,
@@ -143,7 +148,10 @@ mod tests {
             4701,
             None,
             None,
-            vec![NetIface { name: "lo".into(), ip: std::net::IpAddr::from([127, 0, 0, 1]) }],
+            vec![NetIface {
+                name: "lo".into(),
+                ip: std::net::IpAddr::from([127, 0, 0, 1]),
+            }],
             None,
             false,
             false,
