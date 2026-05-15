@@ -24,6 +24,10 @@ pub struct Cli {
     #[arg(long)]
     pub key: Option<PathBuf>,
 
+    /// Enable HTTP file server (assumed in console mode if no service flag is given)
+    #[arg(long)]
+    pub web: bool,
+
     /// Enable monitoring panel (web UI)
     #[arg(long)]
     pub web_monitor: bool,
@@ -98,6 +102,7 @@ mod tests {
             port_ssl: None,
             cert: None,
             key: None,
+            web: false,
             web_monitor: false,
             port_gui: None,
             user: None,
@@ -140,5 +145,17 @@ mod tests {
     fn test_parse_web_ui_is_rejected() {
         let result = Cli::try_parse_from(["serve", "--web-ui"]);
         assert!(result.is_err(), "--web-ui must no longer be accepted");
+    }
+
+    #[test]
+    fn test_parse_web_flag() {
+        let cli = Cli::try_parse_from(["serve", "--web"]).unwrap();
+        assert!(cli.web);
+    }
+
+    #[test]
+    fn test_parse_no_web_flag_defaults_false() {
+        let cli = Cli::try_parse_from(["serve"]).unwrap();
+        assert!(!cli.web);
     }
 }
