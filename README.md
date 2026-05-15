@@ -85,8 +85,83 @@ serve /data --upload --webdav-rw --user admin --pass secret --cors --web-ui
 | `--webdav` | Enable WebDAV (read-only) | off |
 | `--webdav-rw` | Enable WebDAV with write access | off |
 | `--port-dav` | WebDAV port | auto-find from 5001 |
-| `--web-ui` | Enable Web UI admin panel | off |
+| `--web-ui` | Enable Web UI admin panel (deprecated, see Daemon Mode) | off |
 | `--port-gui` | Web UI port | auto-find from 4901 |
+| `--daemon` | Run in daemon mode (no TUI, runs in background) | off |
+| `--web` | Enable HTTP file server | off |
+| `--web-ssl` | Enable HTTPS file server (requires `--cert` and `--key`) | off |
+| `--webdav` | Enable WebDAV (read-only) | off |
+| `--webdav-rw` | Enable WebDAV with write access (requires `--dav-user` and `--dav-pass`) | off |
+| `--dav-user` | WebDAV username | — |
+| `--dav-pass` | WebDAV password | — |
+| `--web-monitor` | Enable monitoring panel (replaces `--web-ui`) | off |
+
+### Daemon Mode
+
+In daemon mode, `serve` runs without the TUI dashboard and is suitable for running as a systemd service or in the background.
+
+```bash
+# Run file server + WebDAV in daemon mode
+serve --daemon --web --webdav-rw --dav-user alice --dav-pass s3cret /srv/files
+
+# File server on custom ports
+serve --daemon --web --port 8080 /data
+
+# File server with HTTPS
+serve --daemon --web --web-ssl --cert cert.pem --key key.pem --port 4701 --port-ssl 4801 /data
+
+# All services together
+serve --daemon --web --web-ssl --webdav-rw --web-monitor \
+  --cert cert.pem --key key.pem \
+  --dav-user alice --dav-pass s3cret \
+  --port 4701 --port-ssl 4801 --port-dav 5001 --port-gui 4901 \
+  /srv/files
+```
+
+#### Available Services
+
+| Service | Flag | Default Port | Port Flag |
+|---------|------|--------------|-----------|
+| HTTP file server | `--web` | 4701 | `--port` |
+| HTTPS file server | `--web-ssl` | 4801 | `--port-ssl` |
+| Monitoring panel | `--web-monitor` | 4901 | `--port-gui` |
+| WebDAV | `--webdav` / `--webdav-rw` | 5001 | `--port-dav` |
+
+#### systemd Service Example
+
+Create `/etc/systemd/system/serve.service`:
+
+```ini
+[Unit]
+Description=serve file server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/serve --daemon --web --webdav-rw \
+  --port 8080 --port-dav 8081 \
+  --dav-user alice --dav-pass CHANGEME \
+  /srv/files
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable serve
+sudo systemctl start serve
+```
+
+### Breaking Changes
+
+- **`--web-ui` renamed to `--web-monitor`**: The old flag is deprecated. Use `--web-monitor` for the new monitoring panel.
+- **HTTPS now requires `--web-ssl` flag**: Previously, providing `--cert` and `--key` would automatically enable HTTPS. Now you must explicitly pass `--web-ssl` to enable the HTTPS server.
+- **WebDAV requires credentials**: Both `--webdav` and `--webdav-rw` now require `--dav-user` and `--dav-pass` to be set.
 
 ### Mounting via WebDAV
 
@@ -172,6 +247,99 @@ serve --web-ui
 # Todo junto
 serve /datos --upload --webdav-rw --user admin --pass secreto --cors --web-ui
 ```
+
+### Flags CLI
+
+| Flag | Descripción | Por defecto |
+|------|-------------|------------|
+| `[DIR]` | Directorio a servir | `.` |
+| `--port` | Puerto HTTP | búsqueda automática desde 4701 |
+| `--port-ssl` | Puerto HTTPS | búsqueda automática desde 4801 |
+| `--cert` | Certificado TLS (PEM) | — |
+| `--key` | Clave privada TLS (PEM) | — |
+| `--user` | Usuario Basic Auth | — |
+| `--pass` | Contraseña Basic Auth | — |
+| `--cors` | Habilitar headers CORS | off |
+| `--upload` | Permitir carga de archivos | off |
+| `--max-upload-size` | Tamaño máximo de carga en MB | 2048 |
+| `--webdav` | Habilitar WebDAV (solo lectura) | off |
+| `--webdav-rw` | Habilitar WebDAV con escritura (requiere `--dav-user` y `--dav-pass`) | off |
+| `--port-dav` | Puerto WebDAV | búsqueda automática desde 5001 |
+| `--web-ui` | Habilitar panel Web UI (deprecado, ver Modo Daemon) | off |
+| `--port-gui` | Puerto Web UI | búsqueda automática desde 4901 |
+| `--daemon` | Ejecutar en modo daemon (sin TUI, en background) | off |
+| `--web` | Habilitar servidor HTTP de archivos | off |
+| `--web-ssl` | Habilitar servidor HTTPS (requiere `--cert` y `--key`) | off |
+| `--dav-user` | Usuario WebDAV | — |
+| `--dav-pass` | Contraseña WebDAV | — |
+| `--web-monitor` | Habilitar panel de monitoreo (reemplaza `--web-ui`) | off |
+
+### Modo Daemon
+
+En modo daemon, `serve` se ejecuta sin el dashboard TUI y es adecuado para ejecutarse como servicio systemd o en background.
+
+```bash
+# Ejecutar servidor de archivos + WebDAV en modo daemon
+serve --daemon --web --webdav-rw --dav-user alice --dav-pass s3cret /srv/archivos
+
+# Servidor de archivos en puertos personalizados
+serve --daemon --web --port 8080 /datos
+
+# Servidor de archivos con HTTPS
+serve --daemon --web --web-ssl --cert cert.pem --key key.pem --port 4701 --port-ssl 4801 /datos
+
+# Todos los servicios juntos
+serve --daemon --web --web-ssl --webdav-rw --web-monitor \
+  --cert cert.pem --key key.pem \
+  --dav-user alice --dav-pass s3cret \
+  --port 4701 --port-ssl 4801 --port-dav 5001 --port-gui 4901 \
+  /srv/archivos
+```
+
+#### Servicios Disponibles
+
+| Servicio | Flag | Puerto por defecto | Flag de Puerto |
+|----------|------|-------------------|-----------------|
+| Servidor HTTP de archivos | `--web` | 4701 | `--port` |
+| Servidor HTTPS de archivos | `--web-ssl` | 4801 | `--port-ssl` |
+| Panel de monitoreo | `--web-monitor` | 4901 | `--port-gui` |
+| WebDAV | `--webdav` / `--webdav-rw` | 5001 | `--port-dav` |
+
+#### Ejemplo de Servicio systemd
+
+Crear `/etc/systemd/system/serve.service`:
+
+```ini
+[Unit]
+Description=serve servidor de archivos
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/serve --daemon --web --webdav-rw \
+  --port 8080 --port-dav 8081 \
+  --dav-user alice --dav-pass CAMBIAR \
+  /srv/archivos
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Habilitar e iniciar:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable serve
+sudo systemctl start serve
+```
+
+### Cambios Incompatibles
+
+- **`--web-ui` renombrado a `--web-monitor`**: El flag antiguo está deprecado. Usa `--web-monitor` para el nuevo panel de monitoreo.
+- **HTTPS ahora requiere flag `--web-ssl`**: Anteriormente, proporcionar `--cert` y `--key` habilitaría HTTPS automáticamente. Ahora debes pasar explícitamente `--web-ssl` para habilitar el servidor HTTPS.
+- **WebDAV requiere credenciales**: Tanto `--webdav` como `--webdav-rw` ahora requieren que se establezcan `--dav-user` y `--dav-pass`.
 
 ### Montar vía WebDAV
 
